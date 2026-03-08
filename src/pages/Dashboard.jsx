@@ -34,16 +34,21 @@ export default function Dashboard() {
   const [areas, setAreas] = useState([]);
   const [solicitudes, setSolicitudes] = useState([]);
   const [cargando, setCargando] = useState(true);
+  const [totalActivos, setTotalActivos] = useState(0);
+  const AREA_IDS = [1, 2, 3];
 
   useEffect(() => {
     const cargarDatos = async () => {
       try {
-        const [resAreas, resSolicitudes] = await Promise.all([
+        const [resAreas, resSolicitudes, ...resActivos] = await Promise.all([
           api.get('/api/areas'),
-          api.get('/api/solicitudes/area/1'), // área 1 = TI por defecto
+          api.get('/api/solicitudes/area/1'),
+          ...AREA_IDS.map(id => api.get(`/api/activos/area/${id}`))
         ]);
         setAreas(resAreas.data);
-        setSolicitudes(resSolicitudes.data.slice(0, 6)); // últimas 6
+        setSolicitudes(resSolicitudes.data.slice(0, 6));
+        const todosActivos = resActivos.flatMap(res => res.data);
+        setTotalActivos(todosActivos.length);
       } catch (error) {
         console.error('Error cargando datos:', error);
       } finally {
@@ -104,7 +109,7 @@ export default function Dashboard() {
             />
             <KpiCard
               titulo="Activos TI Activos"
-              valor="—"
+              valor={totalActivos}
               icono={Monitor}
               colorIcono="text-slate-500"
               colorFondo="bg-slate-100"
