@@ -5,6 +5,7 @@ import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Solicitudes from './pages/Solicitudes';
 import Activos from './pages/Activos';
+import Areas from './pages/Areas';
 
 function App() {
   return (
@@ -16,6 +17,7 @@ function App() {
           <Route path="/solicitudes" element={<ProtectedRoute><Solicitudes /></ProtectedRoute>} />
           <Route path="/activos" element={<ProtectedRoute><Activos /></ProtectedRoute>} />
           <Route path="*" element={<Navigate to="/login" replace />} />
+          <Route path="/areas" element={<ProtectedRoute><Areas /></ProtectedRoute>} />
         </Routes>
       </BrowserRouter>
     </AuthProvider>
