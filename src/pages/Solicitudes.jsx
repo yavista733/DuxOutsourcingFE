@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Plus, Check, X, ChevronDown } from 'lucide-react';
 import Layout from '../components/Layout';
 import api from '../api/axiosConfig';
+import { useAuth } from '../context/AuthContext';
 
 const estadoEstilo = {
   APROBADA: 'bg-emerald-100 text-emerald-700',
