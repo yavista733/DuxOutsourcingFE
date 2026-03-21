@@ -6,6 +6,7 @@ import Dashboard from './pages/Dashboard';
 import Solicitudes from './pages/Solicitudes';
 import Activos from './pages/Activos';
 import Areas from './pages/Areas';
+import Configuracion from './pages/Configuracion';
 
 function App() {
   return (
@@ -18,6 +19,8 @@ function App() {
           <Route path="/activos" element={<ProtectedRoute><Activos /></ProtectedRoute>} />
           <Route path="*" element={<Navigate to="/login" replace />} />
           <Route path="/areas" element={<ProtectedRoute><Areas /></ProtectedRoute>} />
+          <Route path="/configuracion" element={<ProtectedRoute><Configuracion /></ProtectedRoute>} />
+
         </Routes>
       </BrowserRouter>
     </AuthProvider>
