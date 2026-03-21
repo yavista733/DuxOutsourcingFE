@@ -25,6 +25,7 @@ export default function Solicitudes() {
   const [modalAbierto, setModalAbierto] = useState(false);
   const [filtroEstado, setFiltroEstado] = useState('TODOS');
   const [procesando, setProcesando] = useState(null); // id de solicitud en proceso
+  const { isAprobador } = useAuth();
 
   // Carga solicitudes de todas las áreas en paralelo
   const cargarSolicitudes = async () => {
@@ -161,7 +162,7 @@ export default function Solicitudes() {
                         </span>
                       </td>
                       <td className="px-5 py-3">
-                        {sol.estado === 'PENDIENTE' && (
+                        {sol.estado === 'PENDIENTE' && isAprobador && (
                           <div className="flex gap-2">
                             <button
                               onClick={() => handleAprobar(sol.id)}

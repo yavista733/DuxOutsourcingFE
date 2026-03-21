@@ -1,9 +1,11 @@
 import Sidebar from './Sidebar';
 import { Bell, Search, Menu, X } from 'lucide-react';
 import { useState } from 'react';
+import { useAuth } from '../context/AuthContext';
 
 export default function Layout({ children }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const { usuario } = useAuth();
 
   return (
     <div className="flex min-h-screen w-screen bg-slate-100">
@@ -54,13 +56,21 @@ export default function Layout({ children }) {
               </span>
             </button>
             <div className="flex items-center gap-2">
+
               <div className="w-8 h-8 rounded-full bg-emerald-600 flex items-center justify-center">
-                <span className="text-white text-xs font-bold">A</span>
+                <span className="text-white text-xs font-bold">
+                  {usuario?.username?.charAt(0).toUpperCase() || 'U'}
+                </span>
               </div>
               <div className="hidden sm:block text-right">
-                <p className="text-sm font-medium text-slate-700 leading-none">Admin</p>
-                <p className="text-xs text-slate-400">Administrador</p>
+                <p className="text-sm font-medium text-slate-700 leading-none">
+                  {usuario?.username || 'Usuario'}
+                </p>
+                <p className="text-xs text-slate-400">
+                  {usuario?.rol || 'Sin rol'}
+                </p>
               </div>
+
             </div>
           </div>
         </header>
