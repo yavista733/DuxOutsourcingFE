@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
-import { Plus, X, Monitor, Package } from 'lucide-react';
+import { Plus, X, Monitor, Package, Pencil } from 'lucide-react';
 import Layout from '../components/Layout';
+import { useAuth } from '../context/AuthContext';
 import api from '../api/axiosConfig';
 
 const estadoEstilo = {
@@ -18,21 +19,33 @@ const AREA_IDS = [1, 2, 3];
 const AREA_NOMBRES = { 1: 'TI', 2: 'RRHH', 3: 'OPERACIONES' };
 
 export default function Activos() {
+  const { isAdmin, usuario } = useAuth();
   const [activos, setActivos] = useState([]);
   const [areas, setAreas] = useState([]);
   const [cargando, setCargando] = useState(true);
-  const [modalAbierto, setModalAbierto] = useState(false);
+  const [modalCrear, setModalCrear] = useState(false);
+  const [activoEditar, setActivoEditar] = useState(null);
   const [filtroTipo, setFiltroTipo] = useState('TODOS');
 
   const cargarActivos = async () => {
     setCargando(true);
     try {
-      const [resAreas, ...resActivos] = await Promise.all([
-        api.get('/api/areas'),
-        ...AREA_IDS.map(id => api.get(`/api/activos/area/${id}`))
-      ]);
+      const resAreas = await api.get('/api/areas');
       setAreas(resAreas.data);
-      const todos = resActivos.flatMap(res => res.data);
+
+      let todos = [];
+      if (isAdmin) {
+        // ADMIN ve todos los activos globalmente
+        const res = await api.get('/api/activos');
+        todos = res.data;
+      } else {
+        // Otros roles ven solo su área
+        const areaId = usuario?.areaId;
+        if (areaId) {
+          const res = await api.get(`/api/activos/area/${areaId}`);
+          todos = res.data;
+        }
+      }
       todos.sort((a, b) => b.id - a.id);
       setActivos(todos);
     } catch (error) {
@@ -42,29 +55,25 @@ export default function Activos() {
     }
   };
 
-  useEffect(() => {
-    cargarActivos();
-  }, []);
+  useEffect(() => { cargarActivos(); }, []);
 
   const activosFiltrados = filtroTipo === 'TODOS'
     ? activos
     : activos.filter(a => a.tipo === filtroTipo);
 
-  // Contadores para las tarjetas
   const totalHardware = activos.filter(a => a.tipo === 'HARDWARE').length;
   const totalSoftware = activos.filter(a => a.tipo === 'SOFTWARE').length;
   const totalDisponible = activos.filter(a => a.estado === 'DISPONIBLE').length;
 
   return (
     <Layout>
-      {/* Encabezado */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
         <div>
           <h1 className="text-2xl font-bold text-slate-800">Activos TI</h1>
           <p className="text-slate-500 text-sm mt-1">Inventario de hardware y software</p>
         </div>
         <button
-          onClick={() => setModalAbierto(true)}
+          onClick={() => setModalCrear(true)}
           className="flex items-center gap-2 bg-emerald-500 hover:bg-emerald-400 text-white px-4 py-2.5 rounded-xl font-medium text-sm transition-colors"
         >
           <Plus size={18} />
@@ -80,9 +89,7 @@ export default function Activos() {
         </div>
         <div className="bg-white rounded-xl p-4 border border-slate-100 shadow-sm">
           <p className="text-slate-500 text-sm">Hardware / Software</p>
-          <p className="text-2xl font-bold text-slate-800 mt-1">
-            {totalHardware} / {totalSoftware}
-          </p>
+          <p className="text-2xl font-bold text-slate-800 mt-1">{totalHardware} / {totalSoftware}</p>
         </div>
         <div className="bg-white rounded-xl p-4 border border-slate-100 shadow-sm">
           <p className="text-slate-500 text-sm">Disponibles</p>
@@ -124,12 +131,13 @@ export default function Activos() {
                   <th className="text-left px-5 py-3 text-slate-500 font-medium">Tipo</th>
                   <th className="text-left px-5 py-3 text-slate-500 font-medium">Área</th>
                   <th className="text-left px-5 py-3 text-slate-500 font-medium">Estado</th>
+                  <th className="text-left px-5 py-3 text-slate-500 font-medium">Acciones</th>
                 </tr>
               </thead>
               <tbody>
                 {activosFiltrados.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="text-center py-12 text-slate-400">
+                    <td colSpan={7} className="text-center py-12 text-slate-400">
                       No hay activos registrados
                     </td>
                   </tr>
@@ -139,9 +147,7 @@ export default function Activos() {
                       <td className="px-5 py-3 font-semibold text-slate-700">
                         ACT-{String(activo.id).padStart(3, '0')}
                       </td>
-                      <td className="px-5 py-3 text-slate-700 font-medium">
-                        {activo.nombre}
-                      </td>
+                      <td className="px-5 py-3 text-slate-700 font-medium">{activo.nombre}</td>
                       <td className="px-5 py-3 text-slate-500 font-mono text-xs">
                         {activo.codigoSerie || '—'}
                       </td>
@@ -159,6 +165,15 @@ export default function Activos() {
                           {activo.estado}
                         </span>
                       </td>
+                      <td className="px-5 py-3">
+                        <button
+                          onClick={() => setActivoEditar(activo)}
+                          className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 text-xs font-medium transition-colors"
+                        >
+                          <Pencil size={12} />
+                          Editar
+                        </button>
+                      </td>
                     </tr>
                   ))
                 )}
@@ -168,28 +183,32 @@ export default function Activos() {
         )}
       </div>
 
-      {/* Modal */}
-      {modalAbierto && (
+      {/* Modal Crear */}
+      {modalCrear && (
         <ModalNuevoActivo
           areas={areas}
-          onCerrar={() => setModalAbierto(false)}
-          onGuardado={() => {
-            setModalAbierto(false);
-            cargarActivos();
-          }}
+          onCerrar={() => setModalCrear(false)}
+          onGuardado={() => { setModalCrear(false); cargarActivos(); }}
+        />
+      )}
+
+      {/* Modal Editar */}
+      {activoEditar && (
+        <ModalEditarActivo
+          activo={activoEditar}
+          areas={areas}
+          onCerrar={() => setActivoEditar(null)}
+          onGuardado={() => { setActivoEditar(null); cargarActivos(); }}
         />
       )}
     </Layout>
   );
 }
 
+// ── Modal Crear Activo ───────────────────────────────────────
 function ModalNuevoActivo({ areas, onCerrar, onGuardado }) {
   const [form, setForm] = useState({
-    nombre: '',
-    codigoSerie: '',
-    tipo: 'HARDWARE',
-    estado: 'DISPONIBLE',
-    areaId: '',
+    nombre: '', codigoSerie: '', tipo: 'HARDWARE', estado: 'DISPONIBLE', areaId: '',
   });
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState('');
@@ -215,7 +234,7 @@ function ModalNuevoActivo({ areas, onCerrar, onGuardado }) {
         area: { id: parseInt(form.areaId) },
       });
       onGuardado();
-    } catch (error) {
+    } catch {
       setError('Error al crear el activo. Intenta de nuevo.');
     } finally {
       setGuardando(false);
@@ -227,101 +246,158 @@ function ModalNuevoActivo({ areas, onCerrar, onGuardado }) {
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-md">
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
           <h2 className="font-semibold text-slate-800">Nuevo Activo TI</h2>
-          <button onClick={onCerrar} className="text-slate-400 hover:text-slate-600">
-            <X size={20} />
-          </button>
+          <button onClick={onCerrar} className="text-slate-400 hover:text-slate-600"><X size={20} /></button>
         </div>
-
         <form onSubmit={handleSubmit} className="px-6 py-5 space-y-4">
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1.5">Nombre</label>
-            <input
-              type="text"
-              name="nombre"
-              value={form.nombre}
-              onChange={handleChange}
+            <input type="text" name="nombre" value={form.nombre} onChange={handleChange}
               placeholder="Ej: Laptop Dell XPS"
-              className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-slate-700 text-sm focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
-            />
+              className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-slate-700 text-sm focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500" />
           </div>
-
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1.5">
               Código de Serie <span className="text-slate-400 font-normal">(opcional)</span>
             </label>
-            <input
-              type="text"
-              name="codigoSerie"
-              value={form.codigoSerie}
-              onChange={handleChange}
+            <input type="text" name="codigoSerie" value={form.codigoSerie} onChange={handleChange}
               placeholder="Ej: DELL-001"
-              className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-slate-700 text-sm focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
-            />
+              className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-slate-700 text-sm focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500" />
           </div>
-
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1.5">Tipo</label>
-              <select
-                name="tipo"
-                value={form.tipo}
-                onChange={handleChange}
-                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-slate-700 text-sm focus:outline-none focus:border-emerald-500 bg-white"
-              >
+              <select name="tipo" value={form.tipo} onChange={handleChange}
+                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-slate-700 text-sm focus:outline-none focus:border-emerald-500 bg-white">
                 <option value="HARDWARE">HARDWARE</option>
                 <option value="SOFTWARE">SOFTWARE</option>
               </select>
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1.5">Estado</label>
-              <select
-                name="estado"
-                value={form.estado}
-                onChange={handleChange}
-                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-slate-700 text-sm focus:outline-none focus:border-emerald-500 bg-white"
-              >
+              <select name="estado" value={form.estado} onChange={handleChange}
+                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-slate-700 text-sm focus:outline-none focus:border-emerald-500 bg-white">
                 <option value="DISPONIBLE">DISPONIBLE</option>
                 <option value="ASIGNADO">ASIGNADO</option>
                 <option value="MANTENIMIENTO">MANTENIMIENTO</option>
               </select>
             </div>
           </div>
-
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1.5">Área</label>
-            <select
-              name="areaId"
-              value={form.areaId}
-              onChange={handleChange}
-              className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-slate-700 text-sm focus:outline-none focus:border-emerald-500 bg-white"
-            >
+            <select name="areaId" value={form.areaId} onChange={handleChange}
+              className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-slate-700 text-sm focus:outline-none focus:border-emerald-500 bg-white">
               <option value="">Selecciona un área</option>
-              {areas.map(area => (
-                <option key={area.id} value={area.id}>{area.nombre}</option>
-              ))}
+              {areas.map(area => <option key={area.id} value={area.id}>{area.nombre}</option>)}
             </select>
           </div>
-
-          {error && (
-            <div className="bg-red-50 border border-red-200 text-red-600 text-sm px-4 py-3 rounded-xl">
-              {error}
-            </div>
-          )}
-
+          {error && <div className="bg-red-50 border border-red-200 text-red-600 text-sm px-4 py-3 rounded-xl">{error}</div>}
           <div className="flex gap-3 pt-2">
-            <button
-              type="button"
-              onClick={onCerrar}
-              className="flex-1 py-2.5 rounded-xl border border-slate-200 text-slate-600 text-sm font-medium hover:bg-slate-50 transition-colors"
-            >
-              Cancelar
-            </button>
-            <button
-              type="submit"
-              disabled={guardando}
-              className="flex-1 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-white text-sm font-medium transition-colors disabled:opacity-50"
-            >
+            <button type="button" onClick={onCerrar} className="flex-1 py-2.5 rounded-xl border border-slate-200 text-slate-600 text-sm font-medium hover:bg-slate-50">Cancelar</button>
+            <button type="submit" disabled={guardando} className="flex-1 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-white text-sm font-medium disabled:opacity-50">
               {guardando ? 'Guardando...' : 'Registrar Activo'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+// ── Modal Editar Activo ──────────────────────────────────────
+function ModalEditarActivo({ activo, areas, onCerrar, onGuardado }) {
+  const [form, setForm] = useState({
+    nombre: activo.nombre || '',
+    codigoSerie: activo.codigoSerie || '',
+    tipo: activo.tipo || 'HARDWARE',
+    estado: activo.estado || 'DISPONIBLE',
+    areaId: activo.area?.id || '',
+  });
+  const [guardando, setGuardando] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleChange = (e) => {
+    setForm({ ...form, [e.target.name]: e.target.value });
+    setError('');
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!form.nombre || !form.areaId) {
+      setError('Nombre y área son obligatorios.');
+      return;
+    }
+    setGuardando(true);
+    try {
+      await api.put(`/api/activos/${activo.id}`, {
+        nombre: form.nombre,
+        codigoSerie: form.codigoSerie || null,
+        tipo: form.tipo,
+        estado: form.estado,
+        area: { id: parseInt(form.areaId) },
+      });
+      onGuardado();
+    } catch {
+      setError('Error al actualizar el activo. Intenta de nuevo.');
+    } finally {
+      setGuardando(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center px-4">
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+          <div>
+            <h2 className="font-semibold text-slate-800">Editar Activo</h2>
+            <p className="text-xs text-slate-400 mt-0.5">ACT-{String(activo.id).padStart(3, '0')}</p>
+          </div>
+          <button onClick={onCerrar} className="text-slate-400 hover:text-slate-600"><X size={20} /></button>
+        </div>
+        <form onSubmit={handleSubmit} className="px-6 py-5 space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1.5">Nombre</label>
+            <input type="text" name="nombre" value={form.nombre} onChange={handleChange}
+              className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-slate-700 text-sm focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1.5">
+              Código de Serie <span className="text-slate-400 font-normal">(opcional)</span>
+            </label>
+            <input type="text" name="codigoSerie" value={form.codigoSerie} onChange={handleChange}
+              className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-slate-700 text-sm focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500" />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">Tipo</label>
+              <select name="tipo" value={form.tipo} onChange={handleChange}
+                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-slate-700 text-sm focus:outline-none focus:border-emerald-500 bg-white">
+                <option value="HARDWARE">HARDWARE</option>
+                <option value="SOFTWARE">SOFTWARE</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">Estado</label>
+              <select name="estado" value={form.estado} onChange={handleChange}
+                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-slate-700 text-sm focus:outline-none focus:border-emerald-500 bg-white">
+                <option value="DISPONIBLE">DISPONIBLE</option>
+                <option value="ASIGNADO">ASIGNADO</option>
+                <option value="MANTENIMIENTO">MANTENIMIENTO</option>
+              </select>
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1.5">Área</label>
+            <select name="areaId" value={form.areaId} onChange={handleChange}
+              className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-slate-700 text-sm focus:outline-none focus:border-emerald-500 bg-white">
+              <option value="">Selecciona un área</option>
+              {areas.map(area => <option key={area.id} value={area.id}>{area.nombre}</option>)}
+            </select>
+          </div>
+          {error && <div className="bg-red-50 border border-red-200 text-red-600 text-sm px-4 py-3 rounded-xl">{error}</div>}
+          <div className="flex gap-3 pt-2">
+            <button type="button" onClick={onCerrar} className="flex-1 py-2.5 rounded-xl border border-slate-200 text-slate-600 text-sm font-medium hover:bg-slate-50">Cancelar</button>
+            <button type="submit" disabled={guardando} className="flex-1 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-white text-sm font-medium disabled:opacity-50">
+              {guardando ? 'Guardando...' : 'Guardar Cambios'}
             </button>
           </div>
         </form>
