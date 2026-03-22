@@ -3,6 +3,7 @@ import { Plus, Check, X, ChevronDown } from 'lucide-react';
 import Layout from '../components/Layout';
 import api from '../api/axiosConfig';
 import { useAuth } from '../context/AuthContext';
+import { toast } from 'sonner';
 
 const estadoEstilo = {
   APROBADA: 'bg-emerald-100 text-emerald-700',
@@ -67,9 +68,10 @@ export default function Solicitudes() {
     setProcesando(id);
     try {
       await api.post(`/api/solicitudes/${id}/aprobar`);
-      await cargarSolicitudes(); // recarga la tabla
+      toast.success('Solicitud aprobada correctamente');
+      await cargarSolicitudes();
     } catch (error) {
-      alert('Error al aprobar: ' + (error.response?.data || 'Intenta de nuevo'));
+      toast.error('Error al aprobar: ' + (error.response?.data || 'Intenta de nuevo'));
     } finally {
       setProcesando(null);
     }
@@ -79,9 +81,10 @@ export default function Solicitudes() {
     setProcesando(id);
     try {
       await api.post(`/api/solicitudes/${id}/rechazar`);
+      toast.success('Solicitud rechazada');
       await cargarSolicitudes();
     } catch (error) {
-      alert('Error al rechazar: ' + (error.response?.data || 'Intenta de nuevo'));
+      toast.error('Error al rechazar: ' + (error.response?.data || 'Intenta de nuevo'));
     } finally {
       setProcesando(null);
     }
@@ -251,7 +254,7 @@ function ModalNuevaSolicitud({ areas, onCerrar, onGuardado }) {
       });
       onGuardado();
     } catch (error) {
-      setError('Error al crear la solicitud. Intenta de nuevo.');
+      toast.error('Error al crear la solicitud. Intenta de nuevo.');
     } finally {
       setGuardando(false);
     }

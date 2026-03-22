@@ -4,6 +4,7 @@ import Layout from '../components/Layout';
 import { useAuth } from '../context/AuthContext';
 import api from '../api/axiosConfig';
 import { Navigate } from 'react-router-dom';
+import { toast } from 'sonner';
 
 export default function Configuracion() {
   const { isAdmin } = useAuth();
@@ -44,12 +45,12 @@ export default function Configuracion() {
     setProcesando(usuario.id);
     try {
       await api.patch(`/api/usuarios/${usuario.id}/estado`);
-      // Actualiza el estado local sin recargar todo
       setUsuarios(prev =>
         prev.map(u => u.id === usuario.id ? { ...u, activo: !u.activo } : u)
       );
+      toast.success(`Usuario ${usuario.activo ? 'desactivado' : 'activado'} correctamente`);
     } catch (error) {
-      alert('Error al cambiar el estado. Intenta de nuevo.');
+      toast.error('Error al cambiar el estado. Intenta de nuevo.');
     } finally {
       setProcesando(null);
     }
@@ -251,9 +252,10 @@ function ModalCrearUsuario({ areas, onCerrar, onGuardado }) {
         rol: { id: parseInt(form.rolId) },
         area: { id: parseInt(form.areaId) },
       });
+      toast.success('Usuario guardado correctamente');
       onGuardado();
     } catch (err) {
-      setError(err.response?.status === 409 ? 'El usuario o email ya existe.' : 'Error al crear. Intenta de nuevo.');
+      toast.error(err.response?.status === 409 ? 'El usuario o email ya existe.' : 'Error al guardar. Intenta de nuevo.');
     } finally {
       setGuardando(false);
     }
@@ -356,9 +358,10 @@ function ModalEditarUsuario({ usuario, areas, onCerrar, onGuardado }) {
         rol: { id: parseInt(form.rolId) },
         area: { id: parseInt(form.areaId) },
       });
+      toast.success('Usuario guardado correctamente');
       onGuardado();
     } catch (err) {
-      setError(err.response?.status === 409 ? 'El email ya está en uso.' : 'Error al actualizar. Intenta de nuevo.');
+      toast.error(err.response?.status === 409 ? 'El usuario o email ya existe.' : 'Error al guardar. Intenta de nuevo.');
     } finally {
       setGuardando(false);
     }

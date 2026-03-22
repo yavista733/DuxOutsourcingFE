@@ -1,4 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { Toaster } from 'sonner';
 import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import Login from './pages/Login';
@@ -12,15 +13,20 @@ function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
+        {/* Toaster global — muestra las notificaciones en toda la app */}
+        <Toaster
+          position="top-right"
+          richColors
+          duration={3000}
+        />
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
           <Route path="/solicitudes" element={<ProtectedRoute><Solicitudes /></ProtectedRoute>} />
           <Route path="/activos" element={<ProtectedRoute><Activos /></ProtectedRoute>} />
-          <Route path="*" element={<Navigate to="/login" replace />} />
           <Route path="/areas" element={<ProtectedRoute><Areas /></ProtectedRoute>} />
           <Route path="/configuracion" element={<ProtectedRoute><Configuracion /></ProtectedRoute>} />
-
+          <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>
       </BrowserRouter>
     </AuthProvider>

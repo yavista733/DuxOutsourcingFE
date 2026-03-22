@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { X, Pencil, TrendingUp, TrendingDown } from 'lucide-react';
 import Layout from '../components/Layout';
 import api from '../api/axiosConfig';
+import { toast } from 'sonner';
 
 export default function Areas() {
   const [areas, setAreas] = useState([]);
@@ -204,9 +205,10 @@ function ModalEditarArea({ area, onCerrar, onGuardado }) {
         presupuestoAnual: parseFloat(presupuesto),
         saldoActual: area.saldoActual,
       });
+      toast.success('Presupuesto actualizado correctamente');
       onGuardado();
     } catch (error) {
-      setError('Error al actualizar. Intenta de nuevo.');
+      toast.error('Error al actualizar. Intenta de nuevo.');
     } finally {
       setGuardando(false);
     }

@@ -3,6 +3,7 @@ import { Plus, X, Monitor, Package, Pencil } from 'lucide-react';
 import Layout from '../components/Layout';
 import { useAuth } from '../context/AuthContext';
 import api from '../api/axiosConfig';
+import { toast } from 'sonner';
 
 const estadoEstilo = {
   DISPONIBLE: 'bg-emerald-100 text-emerald-700',
@@ -233,9 +234,10 @@ function ModalNuevoActivo({ areas, onCerrar, onGuardado }) {
         estado: form.estado,
         area: { id: parseInt(form.areaId) },
       });
+      toast.success('Activo guardado correctamente');
       onGuardado();
     } catch {
-      setError('Error al crear el activo. Intenta de nuevo.');
+      toast.error('Error al crear el activo. Intenta de nuevo.');
     } finally {
       setGuardando(false);
     }
@@ -335,9 +337,10 @@ function ModalEditarActivo({ activo, areas, onCerrar, onGuardado }) {
         estado: form.estado,
         area: { id: parseInt(form.areaId) },
       });
+      toast.success('Activo guardado correctamente');
       onGuardado();
     } catch {
-      setError('Error al actualizar el activo. Intenta de nuevo.');
+      toast.error('Error al actualizar el activo. Intenta de nuevo.');
     } finally {
       setGuardando(false);
     }
