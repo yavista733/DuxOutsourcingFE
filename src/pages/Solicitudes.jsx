@@ -26,20 +26,30 @@ export default function Solicitudes() {
   const [modalAbierto, setModalAbierto] = useState(false);
   const [filtroEstado, setFiltroEstado] = useState('TODOS');
   const [procesando, setProcesando] = useState(null); // id de solicitud en proceso
-  const { isAprobador } = useAuth();
+  const { isAprobador, isAdmin, usuario } = useAuth();
 
   // Carga solicitudes de todas las áreas en paralelo
   const cargarSolicitudes = async () => {
     setCargando(true);
     try {
-      const [resAreas, ...resSolicitudes] = await Promise.all([
-        api.get('/api/areas'),
-        ...AREA_IDS.map(id => api.get(`/api/solicitudes/area/${id}`))
-      ]);
+      const resAreas = await api.get('/api/areas');
       setAreas(resAreas.data);
-      // Junta todas las solicitudes de las 3 áreas
-      const todas = resSolicitudes.flatMap(res => res.data);
-      // Ordena por id descendente (más recientes primero)
+
+      let todas = [];
+
+      if (isAdmin) {
+        // ADMIN ve todas las solicitudes de todas las áreas
+        const res = await api.get('/api/solicitudes');
+        todas = res.data;
+      } else {
+        // APROBADOR y SOLICITANTE solo ven su área
+        const areaId = usuario?.areaId;
+        if (areaId) {
+          const res = await api.get(`/api/solicitudes/area/${areaId}`);
+          todas = res.data;
+        }
+      }
+
       todas.sort((a, b) => b.id - a.id);
       setSolicitudes(todas);
     } catch (error) {
