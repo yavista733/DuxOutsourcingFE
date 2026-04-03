@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 import { X, Pencil, TrendingUp, TrendingDown } from 'lucide-react';
+import { Navigate } from 'react-router-dom';        // ← agregar
+import { useAuth } from '../context/AuthContext'; 
 import Layout from '../components/Layout';
 import api from '../api/axiosConfig';
 import { toast } from 'sonner';
@@ -8,6 +10,8 @@ export default function Areas() {
   const [areas, setAreas] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [modalArea, setModalArea] = useState(null); // área seleccionada para editar
+    // Ya debería estar, verifica que incluya isAdmin e isAprobador
+  const { isAdmin, isAprobador } = useAuth();
 
   const cargarAreas = async () => {
     setCargando(true);
@@ -38,6 +42,10 @@ export default function Areas() {
     return 'bg-emerald-500';
   };
 
+  if (!isAprobador) {
+  return <Navigate to="/dashboard" replace />;
+  }
+
   return (
     <Layout>
       {/* Encabezado */}
@@ -66,13 +74,16 @@ export default function Areas() {
                       <h2 className="font-bold text-slate-800 text-lg">{area.nombre}</h2>
                       <p className="text-slate-400 text-xs">Presupuesto anual</p>
                     </div>
-                    <button
-                      onClick={() => setModalArea(area)}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 text-xs font-medium transition-colors"
-                    >
-                      <Pencil size={13} />
-                      Editar
-                    </button>
+                    {/* Solo ADMIN puede editar presupuestos */}
+                    {isAdmin && (
+                      <button
+                        onClick={() => setModalArea(area)}
+                        className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 text-xs font-medium transition-colors"
+                      >
+                        <Pencil size={13} />
+                        Editar
+                      </button>
+                    )}
                   </div>
 
                   {/* Monto presupuesto */}
